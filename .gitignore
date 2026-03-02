@@ -1,0 +1,33 @@
+node_modules/
+.expo/
+.expo-shared/
+dist/
+build/
+*.log
+.env
+.env.local
+.DS_Store
+*.tsbuildinfo
+coverage/
+.vscode/
+.idea/
+
+# Backend
+backend/uploads/
+backend/dist/
+
+# Mobile
+mobile/.expo/
+mobile/dist/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+
+# Database
+*.db
+*.db-journal
+prisma/migrations/

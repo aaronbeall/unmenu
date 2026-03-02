@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(uuid())
+  email             String   @unique
+  password_hash     String
+  subscription_tier String   @default("free")
+  scans_remaining   Int      @default(5)
+  scans_reset_at    DateTime @default(now())
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  scans        Scan[]
+  saved_menus  SavedMenu[]
+
+  @@index([email])
+}
+
+model Scan {
+  id              String   @id @default(uuid())
+  user_id         String
+  image_hash      String
+  image_url       String
+  status          String   @default("processing")
+  progress        Int      @default(0)
+  ocr_text        String?  @db.Text
+  processed_menu  Json?
+  error_message   String?
+  created_at      DateTime @default(now())
+  completed_at    DateTime?
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([image_hash])
+  @@index([status])
+}
+
+model SavedMenu {
+  id         String   @id @default(uuid())
+  user_id    String
+  scan_id    String
+  menu_data  Json
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model CachedMenu {
+  id             String   @id @default(uuid())
+  image_hash     String   @unique
+  processed_menu Json
+  hit_count      Int      @default(1)
+  created_at     DateTime @default(now())
+  expires_at     DateTime
+
+  @@index([image_hash])
+  @@index([expires_at])
+}

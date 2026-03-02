@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "UnMenu",
+    "slug": "unmenu",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.unmenu.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "UnMenu needs camera access to scan menus",
+        "NSPhotoLibraryUsageDescription": "UnMenu needs photo library access to select menu images"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.unmenu.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow UnMenu to access your camera to scan menus"
+        }
+      ]
+    ],
+    "scheme": "unmenu"
+  }
+}

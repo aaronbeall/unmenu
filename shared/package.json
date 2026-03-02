@@ -1,0 +1,8 @@
+{
+  "name": "@unmenu/shared",
+  "version": "1.0.0",
+  "main": "types.ts",
+  "dependencies": {
+    "zod": "^3.22.4"
+  }
+}
