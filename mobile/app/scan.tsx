@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Camera, CameraType } from 'expo-camera';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useState, useRef } from 'react';
 import { scanApi } from '../lib/api';
@@ -8,14 +8,14 @@ import { Camera as CameraIcon, Image as ImageIcon, X } from 'lucide-react-native
 
 export default function Scan() {
   const router = useRouter();
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [type, setType] = useState(CameraType.back);
+  const [permission, requestPermission] = useCameraPermissions();
+  const [type, setType] = useState<'front' | 'back'>('back');
   const [uploading, setUploading] = useState(false);
-  const cameraRef = useRef<Camera>(null);
+  const cameraRef = useRef<CameraView>(null);
 
-  const requestPermission = async () => {
-    const { status } = await Camera.requestCameraPermissionsAsync();
-    setHasPermission(status === 'granted');
+  const requestCameraPermission = async () => {
+    const result = await requestPermission();
+    // result contains the permission status
   };
 
   const takePicture = async () => {
@@ -25,7 +25,9 @@ export default function Scan() {
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
       });
-      await uploadImage(photo.uri);
+      if (photo) {
+        await uploadImage(photo.uri);
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to take picture');
     }
@@ -58,22 +60,22 @@ export default function Scan() {
     }
   };
 
-  if (hasPermission === null) {
+  if (permission === null) {
     return (
       <View style={styles.container}>
         <Text style={styles.text}>Requesting camera permission...</Text>
-        <TouchableOpacity style={styles.button} onPress={requestPermission}>
+        <TouchableOpacity style={styles.button} onPress={requestCameraPermission}>
           <Text style={styles.buttonText}>Grant Permission</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  if (hasPermission === false) {
+  if (!permission?.granted) {
     return (
       <View style={styles.container}>
         <Text style={styles.text}>No access to camera</Text>
-        <TouchableOpacity style={styles.button} onPress={requestPermission}>
+        <TouchableOpacity style={styles.button} onPress={requestCameraPermission}>
           <Text style={styles.buttonText}>Request Permission</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.secondaryButton} onPress={() => router.back()}>
@@ -94,7 +96,7 @@ export default function Scan() {
 
   return (
     <View style={styles.cameraContainer}>
-      <Camera style={styles.camera} type={type} ref={cameraRef}>
+      <CameraView style={styles.camera} facing={type} ref={cameraRef}>
         <View style={styles.overlay}>
           <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
             <X size={32} color="white" />
@@ -118,7 +120,7 @@ export default function Scan() {
             <View style={styles.controlButton} />
           </View>
         </View>
-      </Camera>
+      </CameraView>
     </View>
   );
 }

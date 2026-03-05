@@ -4,7 +4,7 @@
 
 ### Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 18+ and npm (20.19.4+ recommended for Expo SDK 54)
 - PostgreSQL 14+ (or Docker)
 - Redis 6+ (or Docker)
 - iOS Simulator (for iOS development)
@@ -157,6 +157,31 @@ npx expo start --android
 npx expo start
 # Scan QR code with Expo Go app
 ```
+
+#### SDK 54 Updates
+
+Mobile app uses Expo SDK 54 with the following key dependencies and changes:
+
+**Core Versions:**
+
+- React 19.1.0
+- React Native 0.81.5
+- Expo Router 6
+- expo-camera 17
+- expo-image-picker 17
+
+**API Changes from SDK 50:**
+
+- `expo-camera` v17 uses `CameraView` component instead of `Camera`
+- Camera permission handling uses `useCameraPermissions` hook instead of `Camera.requestCameraPermissionsAsync()`
+- Camera type parameter uses `facing="back"` string instead of `CameraType.back` enum
+- All camera-related types updated for new API
+- React 19 introduces updates to component APIs and hooks
+
+**Node.js Requirement:**
+
+- SDK 54 packages require Node.js 20.19.4 or higher
+- Current installed: v20.18.0 (works but with engine warnings)
 
 #### Debugging
 
