@@ -15,6 +15,7 @@ unmenu/
 ## Quick Start
 
 ### Backend
+
 ```bash
 cd backend
 npm install
@@ -22,6 +23,7 @@ npm run dev
 ```
 
 ### Mobile
+
 ```bash
 cd mobile
 npm install
@@ -40,14 +42,16 @@ npx expo start
 ## Tech Stack
 
 **Backend:**
+
 - Node.js + TypeScript
 - Express
 - Prisma ORM
 - OpenAI GPT-4 Vision
 - Redis caching
-- AWS S3 for images
+- Base64 image processing
 
 **Mobile:**
+
 - React Native
 - Expo
 - TypeScript

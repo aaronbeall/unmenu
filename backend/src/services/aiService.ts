@@ -6,7 +6,8 @@ const openai = new OpenAI({
 });
 
 export async function processMenuWithAI(
-  imageUrl: string,
+  base64Image: string,
+  mimeType: string,
   ocrText: string,
   userLanguage: string,
   subscriptionTier: string
@@ -66,7 +67,7 @@ ${includeSimilarDishes ? '\nFor similar dishes: Provide 1-3 culturally similar o
             },
             {
               type: 'image_url',
-              image_url: { url: imageUrl },
+              image_url: { url: `data:${mimeType};base64,${base64Image}` },
             },
           ],
         },

@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { scanLimiter } from '../middleware/rateLimiter';
-import { uploadImage } from '../services/uploadService';
+import { processImage, computeContentHash } from '../services/uploadService';
 import { processMenuScan } from '../services/scanService';
 import { PrismaClient } from '@prisma/client';
 
@@ -32,56 +32,23 @@ router.post('/upload', authenticate, scanLimiter, upload.single('image'), async 
       });
     }
 
-    const { imageUrl, imageHash } = await uploadImage(file.buffer);
+    // Process image to base64
+    const { base64Image, mimeType } = await processImage(file.buffer);
 
-    const cachedMenu = await prisma.cachedMenu.findUnique({
-      where: { image_hash: imageHash },
-    });
-
-    if (cachedMenu && new Date(cachedMenu.expires_at) > new Date()) {
-      await prisma.cachedMenu.update({
-        where: { id: cachedMenu.id },
-        data: { hit_count: { increment: 1 } },
-      });
-
-      const scan = await prisma.scan.create({
-        data: {
-          user_id: userId,
-          image_hash: imageHash,
-          image_url: imageUrl,
-          status: 'completed',
-          progress: 100,
-          processed_menu: cachedMenu.processed_menu,
-        },
-      });
-
-      if (user.subscription_tier === 'free') {
-        await prisma.user.update({
-          where: { id: userId },
-          data: { scans_remaining: { decrement: 1 } },
-        });
-      }
-
-      return res.json({
-        scan_id: scan.id,
-        status: 'completed',
-        progress: 100,
-        menu: cachedMenu.processed_menu,
-      });
-    }
-
+    // Create a temporary scan record
     const scan = await prisma.scan.create({
       data: {
         user_id: userId,
-        image_hash: imageHash,
-        image_url: imageUrl,
+        content_hash: '', // Will be set after processing
         status: 'processing',
         progress: 0,
       },
     });
 
-    processMenuScan(scan.id, imageUrl, userLanguage, user.subscription_tier).catch(console.error);
+    // Process menu scan asynchronously
+    processMenuScan(scan.id, base64Image, mimeType, userLanguage, user.subscription_tier).catch(console.error);
 
+    // Decrement scan count for free users
     if (user.subscription_tier === 'free') {
       await prisma.user.update({
         where: { id: userId },

@@ -1,40 +1,25 @@
 import sharp from 'sharp';
 import crypto from 'crypto';
-import AWS from 'aws-sdk';
-import { v4 as uuidv4 } from 'uuid';
 
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION,
-});
-
-export async function uploadImage(buffer: Buffer): Promise<{ imageUrl: string; imageHash: string }> {
-  const imageHash = crypto.createHash('sha256').update(buffer).digest('hex');
-
+/**
+ * Process image for OpenAI Vision API
+ * Returns base64 encoded JPEG and a hash of the content
+ */
+export async function processImage(buffer: Buffer): Promise<{ base64Image: string; mimeType: string }> {
   const processedImage = await sharp(buffer)
     .resize(2048, 2048, { fit: 'inside', withoutEnlargement: true })
     .jpeg({ quality: 85 })
     .toBuffer();
 
-  const key = `menus/${uuidv4()}.jpg`;
-
-  await s3.putObject({
-    Bucket: process.env.AWS_S3_BUCKET!,
-    Key: key,
-    Body: processedImage,
-    ContentType: 'image/jpeg',
-  }).promise();
-
-  const imageUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
-
-  return { imageUrl, imageHash };
+  const base64Image = processedImage.toString('base64');
+  return { base64Image, mimeType: 'image/jpeg' };
 }
 
-export async function getSignedUrl(key: string): Promise<string> {
-  return s3.getSignedUrlPromise('getObject', {
-    Bucket: process.env.AWS_S3_BUCKET!,
-    Key: key,
-    Expires: 3600,
-  });
+/**
+ * Compute content hash of processed menu JSON
+ * Used for deduplication and caching
+ */
+export function computeContentHash(processedMenu: any): string {
+  const jsonString = JSON.stringify(processedMenu);
+  return crypto.createHash('sha256').update(jsonString).digest('hex');
 }

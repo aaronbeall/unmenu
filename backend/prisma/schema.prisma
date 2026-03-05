@@ -17,29 +17,28 @@ model User {
   created_at        DateTime @default(now())
   updated_at        DateTime @updatedAt
 
-  scans        Scan[]
-  saved_menus  SavedMenu[]
+  scans       Scan[]
+  saved_menus SavedMenu[]
 
   @@index([email])
 }
 
 model Scan {
-  id              String   @id @default(uuid())
-  user_id         String
-  image_hash      String
-  image_url       String
-  status          String   @default("processing")
-  progress        Int      @default(0)
-  ocr_text        String?  @db.Text
-  processed_menu  Json?
-  error_message   String?
-  created_at      DateTime @default(now())
-  completed_at    DateTime?
+  id             String    @id @default(uuid())
+  user_id        String
+  content_hash   String    @db.VarChar(64)
+  status         String    @default("processing")
+  progress       Int       @default(0)
+  ocr_text       String?   @db.Text
+  processed_menu Json?
+  error_message  String?
+  created_at     DateTime  @default(now())
+  completed_at   DateTime?
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
-  @@index([image_hash])
+  @@index([content_hash])
   @@index([status])
 }
 
@@ -57,12 +56,12 @@ model SavedMenu {
 
 model CachedMenu {
   id             String   @id @default(uuid())
-  image_hash     String   @unique
+  content_hash   String   @unique @db.VarChar(64)
   processed_menu Json
   hit_count      Int      @default(1)
   created_at     DateTime @default(now())
   expires_at     DateTime
 
-  @@index([image_hash])
+  @@index([content_hash])
   @@index([expires_at])
 }

@@ -3,14 +3,15 @@
 ## Backend Deployment
 
 ### Prerequisites
+
 - PostgreSQL database (e.g., AWS RDS, Heroku Postgres, Supabase)
 - Redis instance (e.g., Redis Cloud, AWS ElastiCache)
-- AWS S3 bucket for image storage
 - OpenAI API key
 
 ### Recommended Platforms
 
 #### Option 1: Railway
+
 1. Create new project on Railway
 2. Add PostgreSQL and Redis services
 3. Deploy backend:
@@ -21,6 +22,7 @@
 4. Set environment variables in Railway dashboard
 
 #### Option 2: Heroku
+
 1. Create new Heroku app
 2. Add PostgreSQL and Redis add-ons
 3. Deploy:
@@ -32,6 +34,7 @@
    ```
 
 #### Option 3: AWS (Production)
+
 - **EC2/ECS** for API servers
 - **RDS** for PostgreSQL
 - **ElastiCache** for Redis
@@ -40,14 +43,16 @@
 - **Load Balancer** for scaling
 
 ### Environment Setup
+
 Set all variables from `.env.example`:
+
 - Database credentials
 - Redis URL
-- AWS credentials
 - OpenAI API key
 - JWT secret
 
 ### Database Migration
+
 ```bash
 npm run prisma:migrate
 ```
@@ -55,6 +60,7 @@ npm run prisma:migrate
 ## Mobile App Deployment
 
 ### Prerequisites
+
 - Apple Developer Account ($99/year) for iOS
 - Google Play Developer Account ($25 one-time) for Android
 - EAS (Expo Application Services) account
@@ -62,11 +68,13 @@ npm run prisma:migrate
 ### Build Configuration
 
 1. Install EAS CLI:
+
 ```bash
 npm install -g eas-cli
 ```
 
 2. Configure EAS:
+
 ```bash
 cd mobile
 eas build:configure
@@ -77,16 +85,19 @@ eas build:configure
 ### iOS Deployment
 
 1. Build for iOS:
+
 ```bash
 eas build --platform ios
 ```
 
 2. Submit to App Store:
+
 ```bash
 eas submit --platform ios
 ```
 
 3. Configure App Store listing:
+
 - Screenshots
 - Description
 - Keywords
@@ -96,16 +107,19 @@ eas submit --platform ios
 ### Android Deployment
 
 1. Build for Android:
+
 ```bash
 eas build --platform android
 ```
 
 2. Submit to Google Play:
+
 ```bash
 eas submit --platform android
 ```
 
 3. Configure Play Store listing:
+
 - Screenshots
 - Description
 - Category
@@ -115,6 +129,7 @@ eas submit --platform android
 ## Production Checklist
 
 ### Backend
+
 - [ ] Set NODE_ENV=production
 - [ ] Use strong JWT_SECRET
 - [ ] Enable HTTPS only
@@ -126,6 +141,7 @@ eas submit --platform android
 - [ ] Configure auto-scaling
 
 ### Mobile
+
 - [ ] Update API_URL to production backend
 - [ ] Test on real devices
 - [ ] Configure app icons
@@ -137,6 +153,7 @@ eas submit --platform android
 - [ ] Write terms of service
 
 ### Legal & Compliance
+
 - [ ] Privacy policy (GDPR, CCPA compliant)
 - [ ] Terms of service
 - [ ] Allergen disclaimer (prominent)
@@ -146,6 +163,7 @@ eas submit --platform android
 ## Monitoring & Maintenance
 
 ### Recommended Tools
+
 - **Sentry** - Error tracking
 - **LogRocket** - Session replay
 - **Mixpanel/Amplitude** - Analytics
@@ -153,6 +171,7 @@ eas submit --platform android
 - **PagerDuty** - Alerting
 
 ### Key Metrics to Monitor
+
 - API response times
 - Error rates
 - Scan success rate
@@ -164,6 +183,7 @@ eas submit --platform android
 ## Scaling Considerations
 
 ### Backend
+
 - Implement worker queues (Bull/BullMQ)
 - Add Redis caching layer
 - Use CDN for static assets
@@ -171,6 +191,7 @@ eas submit --platform android
 - Horizontal scaling with load balancer
 
 ### Cost Optimization
+
 - Cache popular menus (30-day TTL)
 - Implement image deduplication
 - Use OCR before full AI processing
@@ -181,6 +202,7 @@ eas submit --platform android
 ## Security
 
 ### Best Practices
+
 - Use HTTPS everywhere
 - Implement rate limiting
 - Validate all inputs
@@ -194,12 +216,15 @@ eas submit --platform android
 ## Support & Updates
 
 ### OTA Updates (Mobile)
+
 Use Expo Updates for instant fixes:
+
 ```bash
 eas update --branch production
 ```
 
 ### Backend Updates
+
 - Use blue-green deployment
 - Run migrations before deployment
 - Test in staging environment
