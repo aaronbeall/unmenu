@@ -3,16 +3,18 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState, useRef } from 'react';
 import { scanApi, menuApi } from '../../lib/api';
 import { storage } from '../../lib/storage';
-import { BookmarkPlus, AlertTriangle, ArrowLeft } from 'lucide-react-native';
+import { Trash2, AlertTriangle, ArrowLeft } from 'lucide-react-native';
 
 export default function MenuDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [status, setStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [savedMenuId, setSavedMenuId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const isMountedRef = useRef(true);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasAutoSavedRef = useRef(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -45,6 +47,11 @@ export default function MenuDetail() {
 
       if (response.status === 'processing') {
         timeoutRef.current = setTimeout(pollStatus, 2000);
+      } else if (response.status === 'completed' && !hasAutoSavedRef.current) {
+        // Auto-save menu when scan completes
+        hasAutoSavedRef.current = true;
+        autoSaveMenu(response.menu);
+        setLoading(false);
       } else {
         setLoading(false);
       }
@@ -56,17 +63,45 @@ export default function MenuDetail() {
     }
   };
 
-  const saveMenu = async () => {
-    setSaving(true);
+  const autoSaveMenu = async (menu: any) => {
     try {
-      await menuApi.saveMenu(id as string);
-      await storage.saveMenu(id as string, status.menu);
-      Alert.alert('Success', 'Menu saved for offline access');
+      const response = await menuApi.saveMenu(id as string);
+      setSavedMenuId(response.id);
+      await storage.saveMenu(id as string, menu);
     } catch (error) {
-      Alert.alert('Error', 'Failed to save menu');
-    } finally {
-      setSaving(false);
+      console.error('Auto-save failed:', error);
+      // Silently fail - don't interrupt user experience
     }
+  };
+
+  const deleteMenu = async () => {
+    if (!savedMenuId) return;
+    
+    Alert.alert(
+      'Delete Menu',
+      'Are you sure you want to delete this saved menu?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await menuApi.deleteMenu(savedMenuId);
+              await storage.deleteMenu(savedMenuId);
+              Alert.alert('Deleted', 'Menu removed', [
+                { text: 'OK', onPress: () => router.back() }
+              ]);
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete menu');
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading || status?.status === 'processing') {
@@ -108,8 +143,8 @@ export default function MenuDetail() {
           <ArrowLeft size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Menu</Text>
-        <TouchableOpacity onPress={saveMenu} disabled={saving}>
-          <BookmarkPlus size={24} color={saving ? '#ccc' : '#667eea'} />
+        <TouchableOpacity onPress={deleteMenu} disabled={deleting || !savedMenuId}>
+          <Trash2 size={24} color={deleting || !savedMenuId ? '#ccc' : '#ef4444'} />
         </TouchableOpacity>
       </View>
 

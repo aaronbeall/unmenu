@@ -18,6 +18,15 @@ router.post('/save', authenticate, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'Scan not found or not completed' });
     }
 
+    // Check if already saved to prevent duplicates
+    const existing = await prisma.savedMenu.findFirst({
+      where: { user_id: userId, scan_id: scan_id },
+    });
+
+    if (existing) {
+      return res.json({ id: existing.id, message: 'Menu already saved' });
+    }
+
     const savedMenu = await prisma.savedMenu.create({
       data: {
         user_id: userId,

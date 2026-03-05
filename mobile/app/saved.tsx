@@ -67,7 +67,7 @@ export default function SavedMenus() {
             <Menu size={64} color="#ccc" />
             <Text style={styles.emptyText}>No saved menus yet</Text>
             <Text style={styles.emptySubtext}>
-              Scan a menu and save it for offline access
+              Scan a menu to get started - all scans are automatically saved
             </Text>
           </View>
         ) : (
