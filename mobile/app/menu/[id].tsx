@@ -1,9 +1,10 @@
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, Image } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState, useRef } from 'react';
-import { scanApi, menuApi, imagesApi } from '../../lib/api';
+import { scanApi, menuApi } from '../../lib/api';
 import { storage } from '../../lib/storage';
-import { Trash2, AlertTriangle, ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { Trash2, AlertTriangle, ArrowLeft } from 'lucide-react-native';
+import MenuItem from '../../components/MenuItem';
 
 export default function MenuDetail() {
   const { id } = useLocalSearchParams();
@@ -12,84 +13,9 @@ export default function MenuDetail() {
   const [loading, setLoading] = useState(true);
   const [savedMenuId, setSavedMenuId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-  const [dishImages, setDishImages] = useState<Record<string, { images: string[]; loading?: boolean }>>({});
-  const [imageScrollPosition, setImageScrollPosition] = useState<Record<string, number>>({});
   const isMountedRef = useRef(true);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasAutoSavedRef = useRef(false);
-
-  const toggleItem = (sectionIndex: number, itemIndex: number, itemName: string) => {
-    const key = `${sectionIndex}-${itemIndex}`;
-    setExpandedItems(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-        // Lazy load images when item is expanded
-        if (!dishImages[itemName]) {
-          fetchDishImages(itemName);
-        }
-      }
-      return next;
-    });
-  };
-
-  const isItemExpanded = (sectionIndex: number, itemIndex: number) => {
-    return expandedItems.has(`${sectionIndex}-${itemIndex}`);
-  };
-
-  const fetchDishImages = async (dishName: string) => {
-    if (!dishName || dishImages[dishName]) return;
-
-    // Set loading state
-    setDishImages(prev => ({
-      ...prev,
-      [dishName]: { images: [], loading: true }
-    }));
-
-    try {
-      // Try to get cached images first
-      const cached = await storage.getDishImages(dishName);
-      if (cached && isMountedRef.current) {
-        console.log(`[Image Cache] Loaded ${cached.length} cached images for "${dishName}"`);
-        setDishImages(prev => ({
-          ...prev,
-          [dishName]: { images: cached }
-        }));
-        return;
-      }
-
-      // Fetch from API (5 images for full carousel)
-      console.log(`[Image API] Fetching images for "${dishName}" (limit: 5)`);
-      const images = await imagesApi.fetchDishImages(dishName, 5);
-      
-      if (isMountedRef.current) {
-        const imageUrls = images.map((img: any) => img.url);
-        console.log(`[Image API] Received ${imageUrls.length} images for "${dishName}"`);
-        
-        setDishImages(prev => ({
-          ...prev,
-          [dishName]: { images: imageUrls }
-        }));
-        
-        // Cache locally
-        if (imageUrls.length > 0) {
-          await storage.saveDishImages(dishName, imageUrls);
-          console.log(`[Image Cache] Cached ${imageUrls.length} images for "${dishName}"`);
-        }
-      }
-    } catch (error) {
-      console.error(`Failed to load images for "${dishName}":`, error);
-      if (isMountedRef.current) {
-        setDishImages(prev => ({
-          ...prev,
-          [dishName]: { images: [] }
-        }));
-      }
-    }
-  };
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -238,167 +164,15 @@ export default function MenuDetail() {
               {section.name_translation || section.name}
             </Text>
             
-            {section.items?.map((item: any, itemIndex: number) => {
-              const expanded = isItemExpanded(sectionIndex, itemIndex);
-              const itemImages = dishImages[item.name_translation || item.name];
-              const firstImage = itemImages?.images?.[0];
-
-              return (
-                <TouchableOpacity
-                  key={itemIndex}
-                  style={styles.menuItem}
-                  onPress={() => toggleItem(sectionIndex, itemIndex, item.name_translation || item.name)}
-                  activeOpacity={0.7}
-                >
-                  {/* Collapsed View: Image, Name, Price */}
-                  <View style={styles.menuItemCollapsed}>
-                    <View style={styles.thumbnailContainer}>
-                      {itemImages?.loading ? (
-                        <ActivityIndicator size="small" color="#667eea" style={styles.dishImage} />
-                      ) : firstImage ? (
-                        <Image
-                          source={{ uri: firstImage }}
-                          style={styles.dishImage}
-                        />
-                      ) : (
-                        <Image
-                          source={{ uri: 'https://via.placeholder.com/80' }}
-                          style={styles.dishImage}
-                        />
-                      )}
-                    </View>
-                    <View style={styles.menuItemInfo}>
-                      <Text style={styles.menuItemName} numberOfLines={expanded ? undefined : 1}>
-                        {item.name_translation || item.name}
-                      </Text>
-                      {item.price && (
-                        <Text style={styles.menuItemPrice}>{item.price}</Text>
-                      )}
-                    </View>
-                    {expanded ? (
-                      <ChevronUp size={20} color="#667eea" />
-                    ) : (
-                      <ChevronDown size={20} color="#999" />
-                    )}
-                  </View>
-
-                  {/* Expanded View: All Details */}
-                  {expanded && (
-                    <View style={styles.menuItemExpanded}>
-                      {/* Prominent Image Carousel */}
-                      {itemImages && (itemImages.images.length > 0 || itemImages.loading) && (
-                        <View style={styles.imageSection}>
-                          {itemImages.loading ? (
-                            <View style={styles.prominentImageContainer}>
-                              <ActivityIndicator size="large" color="#667eea" />
-                              <Text style={styles.loadingImageText}>Loading photos...</Text>
-                            </View>
-                          ) : (
-                            <>
-                              <ScrollView
-                                horizontal
-                                pagingEnabled
-                                showsHorizontalScrollIndicator={false}
-                                scrollEventThrottle={16}
-                                onScroll={(e) => {
-                                  const xPos = e.nativeEvent.contentOffset.x;
-                                  const imageIndex = Math.round(xPos / 300);
-                                  setImageScrollPosition(prev => ({
-                                    ...prev,
-                                    [item.name_translation || item.name]: imageIndex
-                                  }));
-                                }}
-                                style={styles.imageCarousel}
-                              >
-                                {itemImages.images.map((imgUrl: string, idx: number) => (
-                                  <Image
-                                    key={idx}
-                                    source={{ uri: imgUrl }}
-                                    style={styles.prominentImage}
-                                  />
-                                ))}
-                              </ScrollView>
-                              
-                              {/* Image Indicators */}
-                              {itemImages.images.length > 1 && (
-                                <View style={styles.imageIndicators}>
-                                  {itemImages.images.map((_, idx: number) => (
-                                    <View
-                                      key={idx}
-                                      style={[
-                                        styles.indicatorDot,
-                                        idx === (imageScrollPosition[item.name_translation || item.name] || 0)
-                                          ? styles.indicatorDotActive
-                                          : styles.indicatorDotInactive,
-                                      ]}
-                                    />
-                                  ))}
-                                  <Text style={styles.imageCounter}>
-                                    {(imageScrollPosition[item.name_translation || item.name] || 0) + 1} / {itemImages.images.length}
-                                  </Text>
-                                </View>
-                              )}
-                            </>
-                          )}
-                        </View>
-                      )}
-
-                      {item.original_description && (
-                        <View style={styles.detailSection}>
-                          <Text style={styles.detailLabel}>Original:</Text>
-                          <Text style={styles.detailText}>{item.original_description}</Text>
-                        </View>
-                      )}
-
-                      {item.description_translation && (
-                        <View style={styles.detailSection}>
-                          <Text style={styles.detailLabel}>Description:</Text>
-                          <Text style={styles.detailText}>{item.description_translation}</Text>
-                        </View>
-                      )}
-
-                      {item.characteristics?.length > 0 && (
-                        <View style={styles.detailSection}>
-                          <Text style={styles.detailLabel}>Characteristics:</Text>
-                          <View style={styles.tags}>
-                            {item.characteristics.map((char: string, i: number) => (
-                              <View key={i} style={styles.tag}>
-                                <Text style={styles.tagText}>{char}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        </View>
-                      )}
-
-                      {item.possible_allergens?.length > 0 && (
-                        <View style={styles.detailSection}>
-                          <Text style={styles.detailLabel}>Possible Allergens:</Text>
-                          <Text style={styles.allergensText}>
-                            {item.possible_allergens.join(', ')}
-                          </Text>
-                        </View>
-                      )}
-
-                      {item.similar_dishes?.length > 0 && (
-                        <View style={styles.detailSection}>
-                          <Text style={styles.detailLabel}>Similar to:</Text>
-                          <Text style={styles.detailText}>
-                            {item.similar_dishes.join(', ')}
-                          </Text>
-                        </View>
-                      )}
-
-                      {item.raw_text && (
-                        <View style={styles.detailSection}>
-                          <Text style={styles.debugLabel}>Raw menu text:</Text>
-                          <Text style={styles.debugText}>{item.raw_text}</Text>
-                        </View>
-                      )}
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
+            {section.items?.map((item: any, itemIndex: number) => (
+              <MenuItem
+                key={itemIndex}
+                item={item}
+                sectionIndex={sectionIndex}
+                itemIndex={itemIndex}
+                onToggle={() => {}}
+              />
+            ))}
           </View>
         ))}
       </ScrollView>
@@ -564,36 +338,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#4338ca',
     fontWeight: '500',
-  },
-  allergens: {
-    marginTop: 8,
-    padding: 8,
-    backgroundColor: '#fef2f2',
-    borderRadius: 6,
-  },
-  allergensLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#991b1b',
-    marginBottom: 2,
-  },
-  allergensText: {
-    fontSize: 12,
-    color: '#991b1b',
-  },
-  similar: {
-    marginTop: 8,
-  },
-  similarLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 2,
-  },
-  similarText: {
-    fontSize: 12,
-    color: '#666',
-    fontStyle: 'italic',
   },
   // New collapsible menu item styles
   menuItem: {
