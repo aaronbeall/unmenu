@@ -17,6 +17,8 @@ router.post('/upload', authenticate, scanLimiter, upload.single('image'), async 
     const file = req.file;
     const userLanguage = req.body.user_language || 'en';
 
+    console.log(`[Route /scan/upload] Request from user ${userId}, Language: ${userLanguage}`);
+
     if (!file) {
       return res.status(400).json({ error: 'No image provided' });
     }
@@ -27,6 +29,8 @@ router.post('/upload', authenticate, scanLimiter, upload.single('image'), async 
     }
 
     const user = await refreshFreeTierScanQuota(prisma, existingUser);
+
+    console.log(`[Route /scan/upload] User ${userId} - Tier: ${user.subscription_tier}, Scans remaining: ${user.scans_remaining}`);
 
     if (user.scans_remaining <= 0 && user.subscription_tier === 'free') {
       return res.status(403).json({ 
@@ -47,6 +51,8 @@ router.post('/upload', authenticate, scanLimiter, upload.single('image'), async 
         progress: 0,
       },
     });
+
+    console.log(`[Route /scan/upload] Created scan record - ID: ${scan.id}`);
 
     // Process menu scan asynchronously
     processMenuScan(scan.id, base64Image, mimeType, userLanguage, user.subscription_tier, userId).catch(console.error);
@@ -103,6 +109,7 @@ router.post('/cancel/:scanId', authenticate, async (req: AuthRequest, res) => {
 
     // Only cancel if still processing
     if (scan.status === 'processing') {
+      console.log(`[Route /scan/cancel] Cancelling scan ${scanId}`);
       await prisma.scan.update({
         where: { id: scanId },
         data: {
@@ -111,6 +118,8 @@ router.post('/cancel/:scanId', authenticate, async (req: AuthRequest, res) => {
           progress: 0,
         },
       });
+    } else {
+      console.log(`[Route /scan/cancel] Scan ${scanId} already ${scan.status}, not cancelling`);
     }
 
     res.json({ success: true });

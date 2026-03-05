@@ -14,6 +14,9 @@ export async function processMenuWithAI(
   const includeAllergens = subscriptionTier === 'pro';
   const includeSimilarDishes = subscriptionTier === 'pro';
 
+  console.log(`[AI Service] Starting menu processing - Language: ${userLanguage}, Tier: ${subscriptionTier}`);
+  const startTime = Date.now();
+
   const systemPrompt = `You are an expert menu analysis system. Extract and analyze all menu information from the provided image, then output structured JSON.
 
 CRITICAL RULES:
@@ -62,6 +65,7 @@ ${includeAllergens ? '\nALLERGEN GUIDELINES:\n- List POSSIBLE allergens based on
 ${includeSimilarDishes ? '\nSIMILAR DISHES GUIDELINES:\n- Provide 1-2 familiar dishes for cultural context\n- Examples: "Pad Thai → similar to lo mein", "Tonkotsu Ramen → similar to pork noodle soup"\n- Keep it simple and recognizable' : ''}`;
 
   try {
+    console.log(`[AI Service] Calling OpenAI API - Model: ${process.env.OPENAI_MODEL || 'gpt-4o'}`);
     const response = await openai.chat.completions.create({
       model: process.env.OPENAI_MODEL || 'gpt-4o',
       messages: [
@@ -93,8 +97,13 @@ ${includeSimilarDishes ? '\nSIMILAR DISHES GUIDELINES:\n- Provide 1-2 familiar d
       throw new Error('No response from AI');
     }
 
+    const elapsed = Date.now() - startTime;
+    console.log(`[AI Service] OpenAI response received - Time: ${elapsed}ms, Tokens: ${response.usage?.total_tokens || 'unknown'}`);
+
     const parsed = JSON.parse(content);
     const validated = ProcessedMenuSchema.parse(parsed);
+
+    console.log(`[AI Service] Menu parsed successfully - Sections: ${validated.sections.length}, Total items: ${validated.sections.reduce((sum, s) => sum + s.items.length, 0)}`);
 
     return validated;
   } catch (error) {

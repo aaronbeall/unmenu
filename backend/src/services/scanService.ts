@@ -13,16 +13,19 @@ export async function processMenuScan(
   subscriptionTier: string,
   userId: string
 ): Promise<void> {
+  console.log(`[Scan Service] Starting scan processing - ID: ${scanId}, User: ${userId}`);
+  
   try {
     await prisma.scan.update({
       where: { id: scanId },
       data: { status: 'processing', progress: 10 },
     });
+    console.log(`[Scan Service] Scan ${scanId} - Initial status set to processing (10%)`);
 
     // Check if cancelled early
     const scanCheck = await prisma.scan.findUnique({ where: { id: scanId } });
     if (scanCheck && scanCheck.status === 'failed') {
-      console.log(`Scan ${scanId} was cancelled before processing`);
+      console.log(`[Scan Service] Scan ${scanId} was cancelled before processing started`);
       return;
     }
 
@@ -34,16 +37,19 @@ export async function processMenuScan(
       
       // Check if scan was cancelled (status changed to failed by cancel endpoint)
       if (currentScan && currentScan.status === 'failed') {
+        console.log(`[Scan Service] Scan ${scanId} cancelled during processing`);
         isCancelled = true;
         clearInterval(progressInterval);
         return;
       }
       
       if (currentScan && currentScan.progress < 90) {
+        const newProgress = Math.min(90, currentScan.progress + 15);
         await prisma.scan.update({
           where: { id: scanId },
-          data: { progress: Math.min(90, currentScan.progress + 15) },
+          data: { progress: newProgress },
         });
+        console.log(`[Scan Service] Scan ${scanId} - Progress update: ${newProgress}%`);
       }
     }, 3000); // Update every 3 seconds
 
@@ -51,15 +57,17 @@ export async function processMenuScan(
       // Process with AI (single call now - no separate OCR step)
       const processedMenu = await processMenuWithAI(base64Image, mimeType, userLanguage, subscriptionTier);
       clearInterval(progressInterval);
+      console.log(`[Scan Service] Scan ${scanId} - AI processing completed`);
       
       // If cancelled during processing, don't save results
       if (isCancelled) {
-        console.log(`Scan ${scanId} was cancelled, skipping result save`);
+        console.log(`[Scan Service] Scan ${scanId} was cancelled, skipping result save`);
         return;
       }
 
       // Compute content hash of the processed menu
       const contentHash = computeContentHash(processedMenu);
+      console.log(`[Scan Service] Scan ${scanId} - Content hash: ${contentHash.substring(0, 12)}...`);
 
       await prisma.scan.update({
         where: { id: scanId },
@@ -71,6 +79,7 @@ export async function processMenuScan(
           completed_at: new Date(),
         },
       });
+      console.log(`[Scan Service] Scan ${scanId} - Marked as completed (100%)`);
 
       // Decrement scan count for free users ONLY after successful processing
       if (subscriptionTier === 'free') {
@@ -78,13 +87,14 @@ export async function processMenuScan(
           where: { id: userId },
           data: { scans_remaining: { decrement: 1 } },
         });
+        console.log(`[Scan Service] Decremented scan count for free user ${userId}`);
       }
 
       // Cache the processed menu by content hash
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
 
-      await prisma.cachedMenu.upsert({
+      const cachedMenu = await prisma.cachedMenu.upsert({
         where: { content_hash: contentHash },
         create: {
           content_hash: contentHash,
@@ -97,10 +107,12 @@ export async function processMenuScan(
           expires_at: expiresAt,
         },
       });
+      console.log(`[Scan Service] Cached menu - Hash: ${contentHash.substring(0, 12)}..., Hit count: ${cachedMenu.hit_count}`);
 
       // Preload dish images in the background (don't await)
+      console.log(`[Scan Service] Starting background image preload for scan ${scanId}`);
       preloadMenuImages(processedMenu).catch(err => 
-        console.error('Image preload error:', err)
+        console.error('[Scan Service] Image preload error:', err)
       );
     } catch (aiError) {
       clearInterval(progressInterval);

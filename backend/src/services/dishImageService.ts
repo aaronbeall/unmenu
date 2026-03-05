@@ -26,7 +26,7 @@ export interface DishImage {
  */
 export async function fetchDishImages(dishName: string, limit: number = 5): Promise<DishImage[]> {
   if (!PEXELS_API_KEY) {
-    console.warn('PEXELS_API_KEY not configured, returning empty array');
+    console.warn('[Dish Images] PEXELS_API_KEY not configured, returning empty array');
     return [];
   }
 
@@ -38,8 +38,12 @@ export async function fetchDishImages(dishName: string, limit: number = 5): Prom
     const cached = await redis.get(cacheKey);
     
     if (cached) {
-      return JSON.parse(cached);
+      const images = JSON.parse(cached);
+      console.log(`[Dish Images] Cache HIT for "${dishName}" - ${images.length} images`);
+      return images;
     }
+    
+    console.log(`[Dish Images] Cache MISS for "${dishName}" - Calling Pexels API`);
 
     // Search Pexels for food images
     const url = new URL('https://api.pexels.com/v1/search');
@@ -67,8 +71,11 @@ export async function fetchDishImages(dishName: string, limit: number = 5): Prom
       source: 'pexels' as const,
     }));
 
+    console.log(`[Dish Images] Pexels API returned ${images.length} images for "${dishName}"`);
+
     // Cache the results
     await redis.setex(cacheKey, CACHE_TTL, JSON.stringify(images));
+    console.log(`[Dish Images] Cached ${images.length} images for "${dishName}" (TTL: 30 days)`);
 
     return images;
   } catch (error) {
@@ -91,8 +98,13 @@ export async function preloadMenuImages(menu: any): Promise<void> {
     }
   }
 
+  console.log(`[Dish Images] Preloading images for ${dishNames.length} dishes`);
+
   // Fetch images in parallel but don't wait for them
   Promise.all(
     dishNames.map(name => fetchDishImages(name, 3))
-  ).catch(err => console.error('Error preloading menu images:', err));
+  ).then(results => {
+    const totalImages = results.reduce((sum, imgs) => sum + imgs.length, 0);
+    console.log(`[Dish Images] Preload complete - ${totalImages} total images cached`);
+  }).catch(err => console.error('[Dish Images] Error preloading menu images:', err));
 }

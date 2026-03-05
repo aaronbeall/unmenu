@@ -8,6 +8,8 @@ router.get('/dish/:dishName', async (req, res) => {
     const { dishName } = req.params;
     const limit = parseInt(req.query.limit as string) || 5;
 
+    console.log(`[Route /images/dish] Request for "${dishName}" (limit: ${limit})`);
+
     if (!dishName) {
       return res.status(400).json({ error: 'Dish name required' });
     }
