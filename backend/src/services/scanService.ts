@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { processMenuWithAI } from './aiService';
 import { computeContentHash } from './uploadService';
-import { preloadMenuImages } from './dishImageService';
 
 const prisma = new PrismaClient();
 
@@ -108,12 +107,6 @@ export async function processMenuScan(
         },
       });
       console.log(`[Scan Service] Cached menu - Hash: ${contentHash.substring(0, 12)}..., Hit count: ${cachedMenu.hit_count}`);
-
-      // Preload dish images in the background (don't await)
-      console.log(`[Scan Service] Starting background image preload for scan ${scanId}`);
-      preloadMenuImages(processedMenu).catch(err => 
-        console.error('[Scan Service] Image preload error:', err)
-      );
     } catch (aiError) {
       clearInterval(progressInterval);
       throw aiError;

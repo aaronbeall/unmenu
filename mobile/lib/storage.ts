@@ -26,4 +26,25 @@ export const storage = {
     const key = `menu_${menuId}`;
     await AsyncStorage.removeItem(key);
   },
+
+  saveDishImages: async (dishName: string, imageUrls: string[]) => {
+    const key = `images_${dishName.toLowerCase()}`;
+    await AsyncStorage.setItem(key, JSON.stringify({
+      urls: imageUrls,
+      cachedAt: Date.now(),
+    }));
+  },
+
+  getDishImages: async (dishName: string) => {
+    const key = `images_${dishName.toLowerCase()}`;
+    const data = await AsyncStorage.getItem(key);
+    if (!data) return null;
+    const parsed = JSON.parse(data);
+    // Cache for 30 days
+    if (Date.now() - parsed.cachedAt > 30 * 24 * 60 * 60 * 1000) {
+      await AsyncStorage.removeItem(key);
+      return null;
+    }
+    return parsed.urls;
+  },
 };

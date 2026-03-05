@@ -1,7 +1,7 @@
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, Image } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState, useRef } from 'react';
-import { scanApi, menuApi } from '../../lib/api';
+import { scanApi, menuApi, imagesApi } from '../../lib/api';
 import { storage } from '../../lib/storage';
 import { Trash2, AlertTriangle, ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react-native';
 
@@ -13,12 +13,13 @@ export default function MenuDetail() {
   const [savedMenuId, setSavedMenuId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-  const [dishImages, setDishImages] = useState<Record<string, string[]>>({});
+  const [dishImages, setDishImages] = useState<Record<string, { images: string[]; loading?: boolean }>>({});
+  const [imageScrollPosition, setImageScrollPosition] = useState<Record<string, number>>({});
   const isMountedRef = useRef(true);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasAutoSavedRef = useRef(false);
 
-  const toggleItem = (sectionIndex: number, itemIndex: number) => {
+  const toggleItem = (sectionIndex: number, itemIndex: number, itemName: string) => {
     const key = `${sectionIndex}-${itemIndex}`;
     setExpandedItems(prev => {
       const next = new Set(prev);
@@ -26,6 +27,10 @@ export default function MenuDetail() {
         next.delete(key);
       } else {
         next.add(key);
+        // Lazy load images when item is expanded
+        if (!dishImages[itemName]) {
+          fetchDishImages(itemName);
+        }
       }
       return next;
     });
@@ -33,6 +38,57 @@ export default function MenuDetail() {
 
   const isItemExpanded = (sectionIndex: number, itemIndex: number) => {
     return expandedItems.has(`${sectionIndex}-${itemIndex}`);
+  };
+
+  const fetchDishImages = async (dishName: string) => {
+    if (!dishName || dishImages[dishName]) return;
+
+    // Set loading state
+    setDishImages(prev => ({
+      ...prev,
+      [dishName]: { images: [], loading: true }
+    }));
+
+    try {
+      // Try to get cached images first
+      const cached = await storage.getDishImages(dishName);
+      if (cached && isMountedRef.current) {
+        console.log(`[Image Cache] Loaded ${cached.length} cached images for "${dishName}"`);
+        setDishImages(prev => ({
+          ...prev,
+          [dishName]: { images: cached }
+        }));
+        return;
+      }
+
+      // Fetch from API (5 images for full carousel)
+      console.log(`[Image API] Fetching images for "${dishName}" (limit: 5)`);
+      const images = await imagesApi.fetchDishImages(dishName, 5);
+      
+      if (isMountedRef.current) {
+        const imageUrls = images.map((img: any) => img.url);
+        console.log(`[Image API] Received ${imageUrls.length} images for "${dishName}"`);
+        
+        setDishImages(prev => ({
+          ...prev,
+          [dishName]: { images: imageUrls }
+        }));
+        
+        // Cache locally
+        if (imageUrls.length > 0) {
+          await storage.saveDishImages(dishName, imageUrls);
+          console.log(`[Image Cache] Cached ${imageUrls.length} images for "${dishName}"`);
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to load images for "${dishName}":`, error);
+      if (isMountedRef.current) {
+        setDishImages(prev => ({
+          ...prev,
+          [dishName]: { images: [] }
+        }));
+      }
+    }
   };
 
   useEffect(() => {
@@ -184,20 +240,33 @@ export default function MenuDetail() {
             
             {section.items?.map((item: any, itemIndex: number) => {
               const expanded = isItemExpanded(sectionIndex, itemIndex);
-              
+              const itemImages = dishImages[item.name_translation || item.name];
+              const firstImage = itemImages?.images?.[0];
+
               return (
                 <TouchableOpacity
                   key={itemIndex}
                   style={styles.menuItem}
-                  onPress={() => toggleItem(sectionIndex, itemIndex)}
+                  onPress={() => toggleItem(sectionIndex, itemIndex, item.name_translation || item.name)}
                   activeOpacity={0.7}
                 >
                   {/* Collapsed View: Image, Name, Price */}
                   <View style={styles.menuItemCollapsed}>
-                    <Image
-                      source={{ uri: 'https://via.placeholder.com/80' }}
-                      style={styles.dishImage}
-                    />
+                    <View style={styles.thumbnailContainer}>
+                      {itemImages?.loading ? (
+                        <ActivityIndicator size="small" color="#667eea" style={styles.dishImage} />
+                      ) : firstImage ? (
+                        <Image
+                          source={{ uri: firstImage }}
+                          style={styles.dishImage}
+                        />
+                      ) : (
+                        <Image
+                          source={{ uri: 'https://via.placeholder.com/80' }}
+                          style={styles.dishImage}
+                        />
+                      )}
+                    </View>
                     <View style={styles.menuItemInfo}>
                       <Text style={styles.menuItemName} numberOfLines={expanded ? undefined : 1}>
                         {item.name_translation || item.name}
@@ -216,6 +285,64 @@ export default function MenuDetail() {
                   {/* Expanded View: All Details */}
                   {expanded && (
                     <View style={styles.menuItemExpanded}>
+                      {/* Prominent Image Carousel */}
+                      {itemImages && (itemImages.images.length > 0 || itemImages.loading) && (
+                        <View style={styles.imageSection}>
+                          {itemImages.loading ? (
+                            <View style={styles.prominentImageContainer}>
+                              <ActivityIndicator size="large" color="#667eea" />
+                              <Text style={styles.loadingImageText}>Loading photos...</Text>
+                            </View>
+                          ) : (
+                            <>
+                              <ScrollView
+                                horizontal
+                                pagingEnabled
+                                showsHorizontalScrollIndicator={false}
+                                scrollEventThrottle={16}
+                                onScroll={(e) => {
+                                  const xPos = e.nativeEvent.contentOffset.x;
+                                  const imageIndex = Math.round(xPos / 300);
+                                  setImageScrollPosition(prev => ({
+                                    ...prev,
+                                    [item.name_translation || item.name]: imageIndex
+                                  }));
+                                }}
+                                style={styles.imageCarousel}
+                              >
+                                {itemImages.images.map((imgUrl: string, idx: number) => (
+                                  <Image
+                                    key={idx}
+                                    source={{ uri: imgUrl }}
+                                    style={styles.prominentImage}
+                                  />
+                                ))}
+                              </ScrollView>
+                              
+                              {/* Image Indicators */}
+                              {itemImages.images.length > 1 && (
+                                <View style={styles.imageIndicators}>
+                                  {itemImages.images.map((_, idx: number) => (
+                                    <View
+                                      key={idx}
+                                      style={[
+                                        styles.indicatorDot,
+                                        idx === (imageScrollPosition[item.name_translation || item.name] || 0)
+                                          ? styles.indicatorDotActive
+                                          : styles.indicatorDotInactive,
+                                      ]}
+                                    />
+                                  ))}
+                                  <Text style={styles.imageCounter}>
+                                    {(imageScrollPosition[item.name_translation || item.name] || 0) + 1} / {itemImages.images.length}
+                                  </Text>
+                                </View>
+                              )}
+                            </>
+                          )}
+                        </View>
+                      )}
+
                       {item.original_description && (
                         <View style={styles.detailSection}>
                           <Text style={styles.detailLabel}>Original:</Text>
@@ -536,5 +663,64 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#999',
     fontFamily: 'monospace',
+  },
+  thumbnailContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#e5e5e5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  imageSection: {
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#f5f5f5',
+  },
+  imageCarousel: {
+    height: 300,
+  },
+  prominentImage: {
+    width: 300,
+    height: 300,
+    resizeMode: 'cover',
+  },
+  prominentImageContainer: {
+    height: 300,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  loadingImageText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+  },
+  imageIndicators: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  indicatorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  indicatorDotActive: {
+    backgroundColor: '#fff',
+  },
+  indicatorDotInactive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  imageCounter: {
+    fontSize: 12,
+    color: '#fff',
+    marginLeft: 8,
+    fontWeight: '600',
   },
 });

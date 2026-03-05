@@ -83,28 +83,3 @@ export async function fetchDishImages(dishName: string, limit: number = 5): Prom
     return [];
   }
 }
-
-/**
- * Preload images for all dishes in a menu (background job)
- */
-export async function preloadMenuImages(menu: any): Promise<void> {
-  if (!menu?.sections) return;
-
-  const dishNames: string[] = [];
-  for (const section of menu.sections) {
-    for (const item of section.items) {
-      // Use the translated name for better image search results
-      dishNames.push(item.name_translation || item.name);
-    }
-  }
-
-  console.log(`[Dish Images] Preloading images for ${dishNames.length} dishes`);
-
-  // Fetch images in parallel but don't wait for them
-  Promise.all(
-    dishNames.map(name => fetchDishImages(name, 3))
-  ).then(results => {
-    const totalImages = results.reduce((sum, imgs) => sum + imgs.length, 0);
-    console.log(`[Dish Images] Preload complete - ${totalImages} total images cached`);
-  }).catch(err => console.error('[Dish Images] Error preloading menu images:', err));
-}

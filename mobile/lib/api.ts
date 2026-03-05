@@ -157,4 +157,18 @@ export const userApi = {
   },
 };
 
+export const imagesApi = {
+  fetchDishImages: async (dishName: string, limit: number = 5) => {
+    try {
+      const { data } = await api.get(`/images/dish/${encodeURIComponent(dishName)}`, {
+        params: { limit }
+      });
+      return data.images;
+    } catch (error) {
+      console.error(`Failed to fetch images for "${dishName}":`, error);
+      return [];
+    }
+  },
+};
+
 export default api;
