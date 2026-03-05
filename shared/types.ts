@@ -1,21 +1,25 @@
 export interface MenuItem {
   name: string;
-  translation: string;
-  description: string;
+  name_translation: string;
+  original_description?: string;
+  description_translation?: string;
+  characteristics: string[];
   possible_allergens: string[];
-  dietary_notes: string[];
   similar_dishes: string[];
-  confidence: number;
   price?: string;
+  raw_text?: string;
 }
 
 export interface MenuSection {
   name: string;
+  name_translation?: string;
   items: MenuItem[];
 }
 
 export interface ProcessedMenu {
   id: string;
+  restaurant_name?: string;
+  restaurant_name_translation?: string;
   menu_language: string;
   sections: MenuSection[];
   created_at: string;

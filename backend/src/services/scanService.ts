@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import { extractTextFromImage } from './ocrService';
 import { processMenuWithAI } from './aiService';
 import { computeContentHash } from './uploadService';
+import { preloadMenuImages } from './dishImageService';
 
 const prisma = new PrismaClient();
 
@@ -19,21 +19,12 @@ export async function processMenuScan(
       data: { status: 'processing', progress: 10 },
     });
 
-    // Extract text from base64 image
-    const dataUrl = `data:${mimeType};base64,${base64Image}`;
-    const ocrText = await extractTextFromImage(dataUrl);
-
-    // Check if cancelled after OCR
-    const scanAfterOCR = await prisma.scan.findUnique({ where: { id: scanId } });
-    if (scanAfterOCR && scanAfterOCR.status === 'failed') {
-      console.log(`Scan ${scanId} was cancelled after OCR`);
+    // Check if cancelled early
+    const scanCheck = await prisma.scan.findUnique({ where: { id: scanId } });
+    if (scanCheck && scanCheck.status === 'failed') {
+      console.log(`Scan ${scanId} was cancelled before processing`);
       return;
     }
-
-    await prisma.scan.update({
-      where: { id: scanId },
-      data: { ocr_text: ocrText, progress: 30 },
-    });
 
     // Simulate progress during AI processing (which takes 10-30 seconds)
     // Also check if scan was cancelled
@@ -48,17 +39,17 @@ export async function processMenuScan(
         return;
       }
       
-      if (currentScan && currentScan.progress < 85) {
+      if (currentScan && currentScan.progress < 90) {
         await prisma.scan.update({
           where: { id: scanId },
-          data: { progress: Math.min(85, currentScan.progress + 10) },
+          data: { progress: Math.min(90, currentScan.progress + 15) },
         });
       }
     }, 3000); // Update every 3 seconds
 
     try {
-      // Process with AI
-      const processedMenu = await processMenuWithAI(base64Image, mimeType, ocrText, userLanguage, subscriptionTier);
+      // Process with AI (single call now - no separate OCR step)
+      const processedMenu = await processMenuWithAI(base64Image, mimeType, userLanguage, subscriptionTier);
       clearInterval(progressInterval);
       
       // If cancelled during processing, don't save results
@@ -106,6 +97,11 @@ export async function processMenuScan(
           expires_at: expiresAt,
         },
       });
+
+      // Preload dish images in the background (don't await)
+      preloadMenuImages(processedMenu).catch(err => 
+        console.error('Image preload error:', err)
+      );
     } catch (aiError) {
       clearInterval(progressInterval);
       throw aiError;

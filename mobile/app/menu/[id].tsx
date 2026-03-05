@@ -1,9 +1,9 @@
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, Image } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState, useRef } from 'react';
 import { scanApi, menuApi } from '../../lib/api';
 import { storage } from '../../lib/storage';
-import { Trash2, AlertTriangle, ArrowLeft } from 'lucide-react-native';
+import { Trash2, AlertTriangle, ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react-native';
 
 export default function MenuDetail() {
   const { id } = useLocalSearchParams();
@@ -12,9 +12,28 @@ export default function MenuDetail() {
   const [loading, setLoading] = useState(true);
   const [savedMenuId, setSavedMenuId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [dishImages, setDishImages] = useState<Record<string, string[]>>({});
   const isMountedRef = useRef(true);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasAutoSavedRef = useRef(false);
+
+  const toggleItem = (sectionIndex: number, itemIndex: number) => {
+    const key = `${sectionIndex}-${itemIndex}`;
+    setExpandedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const isItemExpanded = (sectionIndex: number, itemIndex: number) => {
+    return expandedItems.has(`${sectionIndex}-${itemIndex}`);
+  };
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -112,10 +131,9 @@ export default function MenuDetail() {
           Processing menu... {status?.progress || 0}%
         </Text>
         <Text style={styles.subText}>
-          {status?.progress < 30 ? 'Extracting text from image...' : 
-           status?.progress < 50 ? 'Analyzing menu structure...' :
-           status?.progress < 70 ? 'Translating dishes...' : 
-           status?.progress < 90 ? 'Enriching with details...' : 'Finalizing...'}
+          {status?.progress < 25 ? 'Analyzing menu image...' : 
+           status?.progress < 50 ? 'Extracting dishes...' :
+           status?.progress < 75 ? 'Translating and enriching...' : 'Finalizing...'}
         </Text>
       </View>
     );
@@ -142,7 +160,9 @@ export default function MenuDetail() {
         <TouchableOpacity onPress={() => router.back()}>
           <ArrowLeft size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Menu</Text>
+        <Text style={styles.headerTitle}>
+          {menu?.restaurant_name_translation || menu?.restaurant_name || 'Menu'}
+        </Text>
         <TouchableOpacity onPress={deleteMenu} disabled={deleting || !savedMenuId}>
           <Trash2 size={24} color={deleting || !savedMenuId ? '#ccc' : '#ef4444'} />
         </TouchableOpacity>
@@ -158,54 +178,100 @@ export default function MenuDetail() {
       <ScrollView style={styles.scrollView}>
         {menu?.sections?.map((section: any, sectionIndex: number) => (
           <View key={sectionIndex} style={styles.section}>
-            <Text style={styles.sectionTitle}>{section.name}</Text>
+            <Text style={styles.sectionTitle}>
+              {section.name_translation || section.name}
+            </Text>
             
-            {section.items?.map((item: any, itemIndex: number) => (
-              <View key={itemIndex} style={styles.item}>
-                <View style={styles.itemHeader}>
-                  <View style={styles.itemTitleContainer}>
-                    <Text style={styles.itemName}>{item.name}</Text>
-                    {item.price && <Text style={styles.itemPrice}>{item.price}</Text>}
+            {section.items?.map((item: any, itemIndex: number) => {
+              const expanded = isItemExpanded(sectionIndex, itemIndex);
+              
+              return (
+                <TouchableOpacity
+                  key={itemIndex}
+                  style={styles.menuItem}
+                  onPress={() => toggleItem(sectionIndex, itemIndex)}
+                  activeOpacity={0.7}
+                >
+                  {/* Collapsed View: Image, Name, Price */}
+                  <View style={styles.menuItemCollapsed}>
+                    <Image
+                      source={{ uri: 'https://via.placeholder.com/80' }}
+                      style={styles.dishImage}
+                    />
+                    <View style={styles.menuItemInfo}>
+                      <Text style={styles.menuItemName} numberOfLines={expanded ? undefined : 1}>
+                        {item.name_translation || item.name}
+                      </Text>
+                      {item.price && (
+                        <Text style={styles.menuItemPrice}>{item.price}</Text>
+                      )}
+                    </View>
+                    {expanded ? (
+                      <ChevronUp size={20} color="#667eea" />
+                    ) : (
+                      <ChevronDown size={20} color="#999" />
+                    )}
                   </View>
-                  {item.confidence < 0.7 && (
-                    <View style={styles.lowConfidenceBadge}>
-                      <Text style={styles.lowConfidenceText}>Low Confidence</Text>
+
+                  {/* Expanded View: All Details */}
+                  {expanded && (
+                    <View style={styles.menuItemExpanded}>
+                      {item.original_description && (
+                        <View style={styles.detailSection}>
+                          <Text style={styles.detailLabel}>Original:</Text>
+                          <Text style={styles.detailText}>{item.original_description}</Text>
+                        </View>
+                      )}
+
+                      {item.description_translation && (
+                        <View style={styles.detailSection}>
+                          <Text style={styles.detailLabel}>Description:</Text>
+                          <Text style={styles.detailText}>{item.description_translation}</Text>
+                        </View>
+                      )}
+
+                      {item.characteristics?.length > 0 && (
+                        <View style={styles.detailSection}>
+                          <Text style={styles.detailLabel}>Characteristics:</Text>
+                          <View style={styles.tags}>
+                            {item.characteristics.map((char: string, i: number) => (
+                              <View key={i} style={styles.tag}>
+                                <Text style={styles.tagText}>{char}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      )}
+
+                      {item.possible_allergens?.length > 0 && (
+                        <View style={styles.detailSection}>
+                          <Text style={styles.detailLabel}>Possible Allergens:</Text>
+                          <Text style={styles.allergensText}>
+                            {item.possible_allergens.join(', ')}
+                          </Text>
+                        </View>
+                      )}
+
+                      {item.similar_dishes?.length > 0 && (
+                        <View style={styles.detailSection}>
+                          <Text style={styles.detailLabel}>Similar to:</Text>
+                          <Text style={styles.detailText}>
+                            {item.similar_dishes.join(', ')}
+                          </Text>
+                        </View>
+                      )}
+
+                      {item.raw_text && (
+                        <View style={styles.detailSection}>
+                          <Text style={styles.debugLabel}>Raw menu text:</Text>
+                          <Text style={styles.debugText}>{item.raw_text}</Text>
+                        </View>
+                      )}
                     </View>
                   )}
-                </View>
-
-                <Text style={styles.itemTranslation}>{item.translation}</Text>
-                <Text style={styles.itemDescription}>{item.description}</Text>
-
-                {item.dietary_notes?.length > 0 && (
-                  <View style={styles.tags}>
-                    {item.dietary_notes.map((note: string, i: number) => (
-                      <View key={i} style={styles.tag}>
-                        <Text style={styles.tagText}>{note}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {item.possible_allergens?.length > 0 && (
-                  <View style={styles.allergens}>
-                    <Text style={styles.allergensLabel}>Possible allergens:</Text>
-                    <Text style={styles.allergensText}>
-                      {item.possible_allergens.join(', ')}
-                    </Text>
-                  </View>
-                )}
-
-                {item.similar_dishes?.length > 0 && (
-                  <View style={styles.similar}>
-                    <Text style={styles.similarLabel}>Similar to:</Text>
-                    <Text style={styles.similarText}>
-                      {item.similar_dishes.join(', ')}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            ))}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         ))}
       </ScrollView>
@@ -401,5 +467,74 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     fontStyle: 'italic',
+  },
+  // New collapsible menu item styles
+  menuItem: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  menuItemCollapsed: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    gap: 12,
+  },
+  dishImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#e5e5e5',
+  },
+  menuItemInfo: {
+    flex: 1,
+  },
+  menuItemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  menuItemPrice: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#667eea',
+  },
+  menuItemExpanded: {
+    padding: 16,
+    paddingTop: 0,
+    borderTopWidth: 1,
+    borderTopColor: '#f5f5f5',
+  },
+  detailSection: {
+    marginTop: 12,
+  },
+  detailLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 4,
+  },
+  detailText: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
+  },
+  debugLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#999',
+    marginBottom: 4,
+  },
+  debugText: {
+    fontSize: 11,
+    color: '#999',
+    fontFamily: 'monospace',
   },
 });
