@@ -50,11 +50,13 @@ npm run dev
 | **DATABASE_URL**    | `postgresql://postgres:postgres@localhost:5432/unmenu` | Docker PostgreSQL (default with docker-compose.yml)                                     |
 | **REDIS_URL**       | `redis://localhost:6379`                               | Docker Redis (default with docker-compose.yml)                                          |
 | **JWT_SECRET**      | Any random string                                      | Generate: `openssl rand -hex 32`                                                        |
-| **OPENAI_API_KEY**  | `sk-...`                                               | [OpenAI API Keys](https://platform.openai.com/account/api-keys) - Create new secret key |
-| **PORT**            | `3000`                                                 | Default port for backend server                                                         |
-| **NODE_ENV**        | `development`                                          | Set to `development` for local, `production` for deployment                             |
-| **FREE_TIER_SCANS** | `5`                                                    | Monthly scan limit for free users                                                       |
-| **PRO_TIER_SCANS**  | `999999`                                               | Monthly scan limit for pro users                                                        |
+| **OPENAI_API_KEY**           | `sk-...`                                               | [OpenAI API Keys](https://platform.openai.com/account/api-keys) - Create new secret key |
+| **OPENAI_MODEL**             | `gpt-4o`                                               | OpenAI model to use for OCR and menu processing                                          |
+| **PORT**                     | `3000`                                                 | Default port for backend server                                                          |
+| **NODE_ENV**                 | `development`                                          | Set to `development` for local, `production` for deployment                              |
+| **FREE_TIER_INITIAL_SCANS**  | `5`                                                    | Initial scan quota for new free tier users                                               |
+| **FREE_TIER_MONTHLY_SCANS**  | `1`                                                    | Monthly scan reset amount for free tier users                                            |
+| **PRO_TIER_SCANS**           | `35`                                                   | Monthly scan limit for pro users                                                         |
 
 **Quick Setup:**
 
@@ -251,7 +253,7 @@ mobile/
 ### Subscription Logic
 
 - Free tier: 5 scans/month
-- Pro tier: Unlimited scans + premium features
+- Pro tier: 35 scans/month + premium features
 - Scans reset monthly via `scans_reset_at`
 - Check in `scan.ts` route before processing
 

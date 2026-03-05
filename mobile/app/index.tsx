@@ -1,22 +1,43 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Camera, Menu, BookmarkCheck } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { userApi } from '../lib/api';
 
 export default function Home() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [scansRemaining, setScansRemaining] = useState<number | null>(null);
+  const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      checkAuth();
+    }, [])
+  );
 
   const checkAuth = async () => {
     const token = await AsyncStorage.getItem('auth_token');
     setIsAuthenticated(!!token);
+
+    if (!token) {
+      setScansRemaining(null);
+      setSubscriptionTier('free');
+      return;
+    }
+
+    try {
+      const profile = await userApi.getProfile();
+      setScansRemaining(profile.user.scans_remaining);
+      setSubscriptionTier(profile.user.subscription_tier);
+    } catch (error) {
+      console.error('Failed to load profile:', error);
+    }
   };
+
+  const isOutOfScans = isAuthenticated && subscriptionTier === 'free' && scansRemaining === 0;
 
   return (
     <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
@@ -29,12 +50,21 @@ export default function Home() {
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => router.push('/scan')}
+            style={[styles.primaryButton, isOutOfScans && styles.disabledPrimaryButton]}
+            onPress={() => (isOutOfScans ? router.push('/profile') : router.push('/scan'))}
+            disabled={false}
           >
-            <Camera size={24} color="#667eea" />
-            <Text style={styles.primaryButtonText}>Scan Menu</Text>
+            <Camera size={24} color={isOutOfScans ? '#999' : '#667eea'} />
+            <Text style={[styles.primaryButtonText, isOutOfScans && styles.disabledPrimaryButtonText]}>
+              {isOutOfScans ? 'Upgrade to Scan' : 'Scan Menu'}
+            </Text>
           </TouchableOpacity>
+
+          {isAuthenticated && subscriptionTier === 'free' && scansRemaining !== null && (
+            <Text style={[styles.scansHint, scansRemaining === 0 && styles.scansWarning]}>
+              {scansRemaining} scans remaining
+            </Text>
+          )}
 
           {isAuthenticated ? (
             <>
@@ -125,6 +155,23 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#667eea',
+  },
+  disabledPrimaryButton: {
+    backgroundColor: '#f1f1f1',
+  },
+  disabledPrimaryButtonText: {
+    color: '#999',
+  },
+  scansHint: {
+    marginTop: -4,
+    marginBottom: 4,
+    textAlign: 'center',
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  scansWarning: {
+    color: '#ffd6d6',
   },
   secondaryButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',

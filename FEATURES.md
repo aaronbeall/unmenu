@@ -72,13 +72,13 @@
 ## Subscription Tiers
 
 ### 🆓 Free Tier
-- 5 scans per month
+- 5 initial scans (resets to 1/month)
 - Basic translations
 - Dish descriptions
 - Limited saved menus
 
-### 💎 Pro Tier ($9.99/month)
-- **Unlimited scans**
+### 💎 Pro Tier ($4.99/month)
+- **35 scans/month**
 - **Allergen analysis**
 - **Similar dishes**
 - **Unlimited saved menus**

@@ -37,11 +37,11 @@ We reserve the right to terminate accounts that:
 - Limited storage
 
 ### Pro Subscription
-- Unlimited scans
+- 35 scans per month
 - Allergen analysis
 - Similar dishes
 - Offline access
-- $9.99/month (subject to change)
+- $4.99/month (subject to change)
 
 ### Billing
 - Subscriptions auto-renew monthly

@@ -5,7 +5,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 30000,
+  timeout: 60000, // 60 seconds for uploads
 });
 
 api.interceptors.request.use(async (config) => {
@@ -13,8 +13,29 @@ api.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  console.log('API Request:', {
+    url: `${API_URL}${config.url}`,
+    method: config.method,
+    hasToken: !!token,
+  });
   return config;
+}, (error) => {
+  console.error('Request interceptor error:', error);
+  return Promise.reject(error);
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('API Response Error:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      url: error.config?.url,
+    });
+    return Promise.reject(error);
+  }
+);
 
 export interface LoginResponse {
   token: string;
@@ -54,18 +75,46 @@ export const authApi = {
 
 export const scanApi = {
   uploadImage: async (uri: string, userLanguage: string = 'en') => {
-    const formData = new FormData();
-    formData.append('image', {
-      uri,
-      type: 'image/jpeg',
-      name: 'menu.jpg',
-    } as any);
-    formData.append('user_language', userLanguage);
+    try {
+      const token = await AsyncStorage.getItem('auth_token');
+      const formData = new FormData();
+      
+      formData.append('image', {
+        uri,
+        type: 'image/jpeg',
+        name: 'menu.jpg',
+      } as any);
+      formData.append('user_language', userLanguage);
 
-    const { data } = await api.post('/scan/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return data;
+      console.log('Uploading image from URI:', uri);
+
+      const uploadUrl = `${API_URL}/scan/upload`;
+      console.log('Upload URL:', uploadUrl);
+      
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: token ? `Bearer ${token}` : '',
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('Upload error response:', { status: response.status, data });
+        throw new Error(data.error || `Upload failed with status ${response.status}`);
+      }
+      
+      console.log('Upload response:', data);
+      return data;
+    } catch (error: any) {
+      console.error('Upload error details:', {
+        message: error.message,
+        stack: error.stack,
+      });
+      throw error;
+    }
   },
 
   getStatus: async (scanId: string) => {

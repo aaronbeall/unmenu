@@ -151,7 +151,7 @@ From a single photo:
 
 ### Pro Subscription
 
-* Unlimited scans
+* 35 scans/month
 * Allergen analysis
 * Similar dishes
 * Saved menus

@@ -52,7 +52,7 @@ ${includeSimilarDishes ? '\nFor similar dishes: Provide 1-3 culturally similar o
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4-vision-preview',
+      model: process.env.OPENAI_MODEL || 'gpt-4o',
       messages: [
         {
           role: 'system',

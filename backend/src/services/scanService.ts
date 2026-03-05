@@ -10,7 +10,8 @@ export async function processMenuScan(
   base64Image: string,
   mimeType: string,
   userLanguage: string,
-  subscriptionTier: string
+  subscriptionTier: string,
+  userId: string
 ): Promise<void> {
   try {
     await prisma.scan.update({
@@ -43,6 +44,14 @@ export async function processMenuScan(
         completed_at: new Date(),
       },
     });
+
+    // Decrement scan count for free users ONLY after successful processing
+    if (subscriptionTier === 'free') {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { scans_remaining: { decrement: 1 } },
+      });
+    }
 
     // Cache the processed menu by content hash
     const expiresAt = new Date();

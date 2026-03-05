@@ -7,7 +7,7 @@ const openai = new OpenAI({
 export async function extractTextFromImage(imageUrl: string): Promise<string> {
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4-vision-preview',
+      model: process.env.OPENAI_MODEL || 'gpt-4o',
       messages: [
         {
           role: 'user',

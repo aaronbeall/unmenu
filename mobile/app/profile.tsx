@@ -28,7 +28,7 @@ export default function Profile() {
   const handleUpgrade = async () => {
     Alert.alert(
       'Upgrade to Pro',
-      'Get unlimited scans, allergen analysis, and offline access for $9.99/month',
+      'Get 35 scans/month, allergen analysis, and offline access for $4.99/month',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -103,13 +103,11 @@ export default function Profile() {
         <View style={styles.statsCard}>
           <Text style={styles.statsTitle}>Scans Remaining</Text>
           <Text style={styles.statsValue}>
-            {isPro ? '∞' : user?.scans_remaining || 0}
+            {user?.scans_remaining || 0}
           </Text>
-          {!isPro && (
-            <Text style={styles.statsSubtext}>
-              Resets monthly
-            </Text>
-          )}
+          <Text style={styles.statsSubtext}>
+            Resets monthly
+          </Text>
         </View>
 
         {!isPro && (
@@ -121,13 +119,13 @@ export default function Profile() {
               <Crown size={32} color="white" />
               <Text style={styles.upgradeTitle}>Upgrade to Pro</Text>
               <Text style={styles.upgradeSubtitle}>
-                • Unlimited scans{'\n'}
+                • 35 scans/month{'\n'}
                 • Allergen analysis{'\n'}
                 • Similar dishes{'\n'}
                 • Offline access
               </Text>
               <View style={styles.upgradeButton}>
-                <Text style={styles.upgradeButtonText}>$9.99/month</Text>
+                <Text style={styles.upgradeButtonText}>$4.99/month</Text>
               </View>
             </LinearGradient>
           </TouchableOpacity>

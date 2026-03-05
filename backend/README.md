@@ -86,8 +86,10 @@ Optional:
 
 - `PORT` - Server port (default: 3000)
 - `NODE_ENV` - Environment (development/production)
-- `FREE_TIER_SCANS` - Free tier scan limit (default: 5)
-- `PRO_TIER_SCANS` - Pro tier scan limit (default: 999999)
+- `FREE_TIER_INITIAL_SCANS` - Free tier initial scans for new users (default: 5)
+- `FREE_TIER_MONTHLY_SCANS` - Free tier monthly scan reset amount (default: 1)
+- `PRO_TIER_SCANS` - Pro tier monthly scan limit (default: 35)
+- `OPENAI_MODEL` - OpenAI model to use (default: gpt-4o)
 
 ## Architecture
 

@@ -5,6 +5,7 @@ import { scanLimiter } from '../middleware/rateLimiter';
 import { processImage, computeContentHash } from '../services/uploadService';
 import { processMenuScan } from '../services/scanService';
 import { PrismaClient } from '@prisma/client';
+import { refreshFreeTierScanQuota } from '../services/scanQuotaService';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -20,15 +21,17 @@ router.post('/upload', authenticate, scanLimiter, upload.single('image'), async 
       return res.status(400).json({ error: 'No image provided' });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
+    const existingUser = await prisma.user.findUnique({ where: { id: userId } });
+    if (!existingUser) {
       return res.status(404).json({ error: 'User not found' });
     }
+
+    const user = await refreshFreeTierScanQuota(prisma, existingUser);
 
     if (user.scans_remaining <= 0 && user.subscription_tier === 'free') {
       return res.status(403).json({ 
         error: 'No scans remaining',
-        message: 'Please upgrade to Pro for unlimited scans'
+        message: 'Please upgrade to Pro for more scans'
       });
     }
 
@@ -46,15 +49,7 @@ router.post('/upload', authenticate, scanLimiter, upload.single('image'), async 
     });
 
     // Process menu scan asynchronously
-    processMenuScan(scan.id, base64Image, mimeType, userLanguage, user.subscription_tier).catch(console.error);
-
-    // Decrement scan count for free users
-    if (user.subscription_tier === 'free') {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { scans_remaining: { decrement: 1 } },
-      });
-    }
+    processMenuScan(scan.id, base64Image, mimeType, userLanguage, user.subscription_tier, userId).catch(console.error);
 
     res.json({
       scan_id: scan.id,

@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { authLimiter } from '../middleware/rateLimiter';
+import { refreshFreeTierScanQuota } from '../services/scanQuotaService';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -25,7 +26,7 @@ router.post('/register', authLimiter, async (req, res) => {
       data: {
         email,
         password_hash,
-        scans_remaining: parseInt(process.env.FREE_TIER_SCANS || '5'),
+        scans_remaining: parseInt(process.env.FREE_TIER_INITIAL_SCANS || '5', 10),
       },
     });
 
@@ -52,15 +53,17 @@ router.post('/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (!existingUser) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const valid = await bcrypt.compare(password, user.password_hash);
+    const valid = await bcrypt.compare(password, existingUser.password_hash);
     if (!valid) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+
+    const user = await refreshFreeTierScanQuota(prisma, existingUser);
 
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, {
       expiresIn: '30d',
