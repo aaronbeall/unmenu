@@ -1,5 +1,6 @@
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
 import { useEffect, useState, useCallback, useRef, memo } from 'react';
+import PagerView from 'react-native-pager-view';
 import { imagesApi } from '../lib/api';
 import { storage } from '../lib/storage';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
@@ -17,7 +18,6 @@ const MenuItem = memo(({ item, sectionIndex, itemIndex, onToggle }: MenuItemProp
   const [images, setImages] = useState<string[]>([]);
   const [imagesLoading, setImagesLoading] = useState(false);
   const [imageScrollPosition, setImageScrollPosition] = useState(0);
-  const scrollViewRef = useRef<ScrollView>(null);
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -98,13 +98,13 @@ const MenuItem = memo(({ item, sectionIndex, itemIndex, onToggle }: MenuItemProp
   const firstImage = images?.[0];
 
   return (
-    <TouchableOpacity
-      style={styles.menuItem}
-      onPress={handleToggle}
-      activeOpacity={0.7}
-    >
-      {/* Collapsed View: Image, Name, Price */}
-      <View style={styles.menuItemCollapsed}>
+    <View style={styles.menuItem}>
+      {/* Header: Collapsed View */}
+      <TouchableOpacity
+        style={styles.menuItemCollapsedButton}
+        onPress={handleToggle}
+        activeOpacity={0.7}
+      >
         <View style={styles.thumbnailContainer}>
           {imagesLoading ? (
             <ActivityIndicator size="small" color="#667eea" style={styles.dishImage} />
@@ -128,7 +128,7 @@ const MenuItem = memo(({ item, sectionIndex, itemIndex, onToggle }: MenuItemProp
         ) : (
           <ChevronDown size={20} color="#999" />
         )}
-      </View>
+      </TouchableOpacity>
 
       {/* Expanded View: All Details */}
       {expanded && (
@@ -143,27 +143,19 @@ const MenuItem = memo(({ item, sectionIndex, itemIndex, onToggle }: MenuItemProp
                 </View>
               ) : (
                 <>
-                  <ScrollView
-                    ref={scrollViewRef}
-                    horizontal
-                    decelerationRate="fast"
-                    snapToInterval={300}
-                    snapToAlignment="center"
-                    showsHorizontalScrollIndicator={false}
-                    scrollEventThrottle={16}
-                    onScroll={(e) => {
-                      const xPos = e.nativeEvent.contentOffset.x;
-                      // Calculate which image is in view based on scroll position
-                      // With snapToAlignment="center", account for initial offset
-                      const imageIndex = Math.round((xPos + 150) / 300);
-                      setImageScrollPosition(Math.max(0, Math.min(imageIndex, images.length - 1)));
-                    }}
+                  <PagerView
                     style={styles.imageCarousel}
+                    initialPage={0}
+                    onPageSelected={(e) => {
+                      setImageScrollPosition(e.nativeEvent.position);
+                    }}
                   >
                     {images.map((imgUrl: string, idx: number) => (
-                      <Image key={idx} source={{ uri: imgUrl }} style={styles.prominentImage} />
+                      <View key={idx} style={styles.pageContainer}>
+                        <Image source={{ uri: imgUrl }} style={styles.prominentImage} />
+                      </View>
                     ))}
-                  </ScrollView>
+                  </PagerView>
 
                   {/* Image Indicators */}
                   {images.length > 1 && (
@@ -238,7 +230,7 @@ const MenuItem = memo(({ item, sectionIndex, itemIndex, onToggle }: MenuItemProp
           )}
         </View>
       )}
-    </TouchableOpacity>
+    </View>
   );
 });
 
@@ -256,7 +248,7 @@ const styles = StyleSheet.create({
     elevation: 3,
     overflow: 'hidden',
   },
-  menuItemCollapsed: {
+  menuItemCollapsedButton: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
@@ -302,13 +294,21 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#f5f5f5',
+    width: '100%',
   },
   imageCarousel: {
+    width: '100%',
     height: 300,
   },
-  prominentImage: {
-    width: 300,
+  pageContainer: {
+    width: '100%',
     height: 300,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  prominentImage: {
+    width: '100%',
+    height: '100%',
     resizeMode: 'cover',
   },
   prominentImageContainer: {
@@ -316,6 +316,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
+    width: '100%',
   },
   loadingImageText: {
     marginTop: 12,
