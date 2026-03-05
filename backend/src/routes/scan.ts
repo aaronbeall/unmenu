@@ -88,4 +88,36 @@ router.get('/status/:scanId', authenticate, async (req: AuthRequest, res) => {
   }
 });
 
+router.post('/cancel/:scanId', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const { scanId } = req.params;
+    const userId = req.userId!;
+
+    const scan = await prisma.scan.findFirst({
+      where: { id: scanId, user_id: userId },
+    });
+
+    if (!scan) {
+      return res.status(404).json({ error: 'Scan not found' });
+    }
+
+    // Only cancel if still processing
+    if (scan.status === 'processing') {
+      await prisma.scan.update({
+        where: { id: scanId },
+        data: {
+          status: 'failed',
+          error_message: 'Cancelled by user',
+          progress: 0,
+        },
+      });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Cancel error:', error);
+    res.status(500).json({ error: 'Failed to cancel scan' });
+  }
+});
+
 export default router;

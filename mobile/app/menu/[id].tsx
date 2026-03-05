@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { scanApi, menuApi } from '../../lib/api';
 import { storage } from '../../lib/storage';
 import { BookmarkPlus, AlertTriangle, ArrowLeft } from 'lucide-react-native';
@@ -11,22 +11,46 @@ export default function MenuDetail() {
   const [status, setStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const isMountedRef = useRef(true);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    isMountedRef.current = true;
     pollStatus();
+
+    return () => {
+      isMountedRef.current = false;
+      
+      // Clear any pending timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      // Cancel the scan if still processing
+      if (status?.status === 'processing') {
+        scanApi.cancel(id as string).catch(console.error);
+      }
+    };
   }, [id]);
 
   const pollStatus = async () => {
+    if (!isMountedRef.current) return;
+
     try {
       const response = await scanApi.getStatus(id as string);
+      
+      if (!isMountedRef.current) return;
+      
       setStatus(response);
 
       if (response.status === 'processing') {
-        setTimeout(pollStatus, 2000);
+        timeoutRef.current = setTimeout(pollStatus, 2000);
       } else {
         setLoading(false);
       }
     } catch (error) {
+      if (!isMountedRef.current) return;
+      
       setLoading(false);
       Alert.alert('Error', 'Failed to load menu');
     }
@@ -53,8 +77,10 @@ export default function MenuDetail() {
           Processing menu... {status?.progress || 0}%
         </Text>
         <Text style={styles.subText}>
-          {status?.progress < 40 ? 'Extracting text...' : 
-           status?.progress < 80 ? 'Translating...' : 'Enriching data...'}
+          {status?.progress < 30 ? 'Extracting text from image...' : 
+           status?.progress < 50 ? 'Analyzing menu structure...' :
+           status?.progress < 70 ? 'Translating dishes...' : 
+           status?.progress < 90 ? 'Enriching with details...' : 'Finalizing...'}
         </Text>
       </View>
     );

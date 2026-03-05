@@ -121,6 +121,11 @@ export const scanApi = {
     const { data } = await api.get<ScanStatusResponse>(`/scan/status/${scanId}`);
     return data;
   },
+
+  cancel: async (scanId: string) => {
+    const { data } = await api.post(`/scan/cancel/${scanId}`);
+    return data;
+  },
 };
 
 export const menuApi = {

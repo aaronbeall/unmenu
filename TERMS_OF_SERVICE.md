@@ -9,6 +9,7 @@ By accessing or using UnMenu, you agree to be bound by these Terms of Service. I
 ## 2. Description of Service
 
 UnMenu provides:
+
 - Menu scanning and OCR services
 - Translation of menu items
 - Allergen information (inferred, not guaranteed)
@@ -17,13 +18,16 @@ UnMenu provides:
 ## 3. User Accounts
 
 ### Registration
+
 - You must provide accurate information
 - You are responsible for account security
 - One account per person
 - Minimum age: 13 years old
 
 ### Account Termination
+
 We reserve the right to terminate accounts that:
+
 - Violate these terms
 - Engage in fraudulent activity
 - Abuse the service
@@ -32,11 +36,13 @@ We reserve the right to terminate accounts that:
 ## 4. Subscription and Payment
 
 ### Free Tier
+
 - 5 scans per month
 - Basic translation features
 - Limited storage
 
 ### Pro Subscription
+
 - 35 scans per month
 - Allergen analysis
 - Similar dishes
@@ -44,6 +50,7 @@ We reserve the right to terminate accounts that:
 - $4.99/month (subject to change)
 
 ### Billing
+
 - Subscriptions auto-renew monthly
 - Cancel anytime (no refunds for partial months)
 - Price changes with 30 days notice
@@ -51,6 +58,7 @@ We reserve the right to terminate accounts that:
 ## 5. Acceptable Use
 
 You agree NOT to:
+
 - Upload inappropriate or illegal content
 - Attempt to reverse engineer the service
 - Use the service for commercial purposes without permission
@@ -63,6 +71,7 @@ You agree NOT to:
 **CRITICAL NOTICE:**
 
 Allergen information provided by UnMenu is:
+
 - **INFERRED** from menu text using AI
 - **NOT VERIFIED** by medical professionals
 - **MAY BE INCOMPLETE OR INACCURATE**
@@ -71,6 +80,7 @@ Allergen information provided by UnMenu is:
 **UnMenu makes NO GUARANTEES about allergen safety.**
 
 If you have food allergies:
+
 - ALWAYS verify with restaurant staff
 - DO NOT rely solely on UnMenu
 - Use at your own risk
@@ -80,11 +90,13 @@ UnMenu is NOT liable for allergic reactions or health issues resulting from use 
 ## 7. Intellectual Property
 
 ### Your Content
+
 - You retain rights to images you upload
 - You grant us license to process and store images
 - We may use anonymized data to improve services
 
 ### Our Content
+
 - UnMenu app, logo, and branding are our property
 - Processed menu data is our intellectual property
 - You may not reproduce or redistribute without permission
@@ -92,6 +104,7 @@ UnMenu is NOT liable for allergic reactions or health issues resulting from use 
 ## 8. Disclaimer of Warranties
 
 UnMenu is provided "AS IS" without warranties of any kind:
+
 - No guarantee of accuracy
 - No guarantee of availability
 - No guarantee of fitness for particular purpose
@@ -99,6 +112,7 @@ UnMenu is provided "AS IS" without warranties of any kind:
 ## 9. Limitation of Liability
 
 To the maximum extent permitted by law:
+
 - We are NOT liable for any indirect, incidental, or consequential damages
 - Our total liability is limited to the amount you paid in the last 12 months
 - We are NOT liable for health issues, allergic reactions, or dietary problems
@@ -106,6 +120,7 @@ To the maximum extent permitted by law:
 ## 10. Indemnification
 
 You agree to indemnify UnMenu from claims arising from:
+
 - Your use of the service
 - Your violation of these terms
 - Your violation of third-party rights
@@ -117,6 +132,7 @@ Your use is also governed by our Privacy Policy. Please review it.
 ## 12. Modifications to Service
 
 We reserve the right to:
+
 - Modify or discontinue features
 - Change pricing with notice
 - Update these terms (with notification)
@@ -124,10 +140,12 @@ We reserve the right to:
 ## 13. Termination
 
 You may terminate by:
+
 - Deleting your account
 - Canceling subscription
 
 We may terminate for:
+
 - Violation of terms
 - Non-payment
 - Illegal activity
@@ -140,12 +158,15 @@ These terms are governed by the laws of [Your Jurisdiction], without regard to c
 ## 15. Dispute Resolution
 
 ### Informal Resolution
+
 Contact us first at support@unmenu.app
 
 ### Arbitration
+
 Disputes will be resolved through binding arbitration, not court.
 
 ### Class Action Waiver
+
 You agree to resolve disputes individually, not as part of a class action.
 
 ## 16. Severability
@@ -159,18 +180,22 @@ These terms constitute the entire agreement between you and UnMenu.
 ## 18. Contact
 
 For questions about these terms:
+
 - Email: legal@unmenu.app
 - Website: https://unmenu.app/terms
 
 ## 19. Special Provisions
 
 ### Medical Disclaimer
+
 UnMenu is NOT a medical device or service. Do not use for medical decisions.
 
 ### Translation Accuracy
+
 Translations are automated and may contain errors. Verify important information.
 
 ### No Professional Advice
+
 UnMenu does not provide dietary, nutritional, or medical advice.
 
 ## 20. Acknowledgment
