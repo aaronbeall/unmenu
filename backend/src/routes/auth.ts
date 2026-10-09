@@ -40,6 +40,8 @@ router.post('/register', authLimiter, async (req, res) => {
         id: user.id,
         email: user.email,
         subscription_tier: user.subscription_tier,
+        subscription_source: user.subscription_source,
+        subscription_expires_at: user.subscription_expires_at,
         scans_remaining: user.scans_remaining,
       },
     });
@@ -75,6 +77,8 @@ router.post('/login', authLimiter, async (req, res) => {
         id: user.id,
         email: user.email,
         subscription_tier: user.subscription_tier,
+        subscription_source: user.subscription_source,
+        subscription_expires_at: user.subscription_expires_at,
         scans_remaining: user.scans_remaining,
       },
     });

@@ -2,6 +2,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { userApi, authApi } from '../lib/api';
+import { useRevenueCat } from '../lib/RevenueCatProvider';
+import { PAYWALL_RESULT } from '../lib/revenuecat';
 import { ArrowLeft, Crown, LogOut } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -9,6 +11,8 @@ export default function Profile() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const rc = useRevenueCat();
 
   useEffect(() => {
     loadProfile();
@@ -18,6 +22,7 @@ export default function Profile() {
     try {
       const response = await userApi.getProfile();
       setUser(response.user);
+      await rc.configure(response.user.id);
     } catch (error) {
       Alert.alert('Error', 'Failed to load profile');
     } finally {
@@ -26,25 +31,44 @@ export default function Profile() {
   };
 
   const handleUpgrade = async () => {
-    Alert.alert(
-      'Upgrade to Pro',
-      'Get 35 scans/month, allergen analysis, and offline access for $4.99/month',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Upgrade',
-          onPress: async () => {
-            try {
-              await userApi.upgrade();
-              loadProfile();
-              Alert.alert('Success', 'Upgraded to Pro!');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to upgrade');
-            }
-          },
-        },
-      ]
-    );
+    try {
+      setPurchaseLoading(true);
+      const result = await rc.showPaywall();
+      if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
+        await loadProfile();
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to show paywall';
+      Alert.alert('Purchase Error', errorMessage);
+    } finally {
+      setPurchaseLoading(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    try {
+      setPurchaseLoading(true);
+      await rc.restore();
+      await loadProfile();
+      Alert.alert('Restored', 'Purchases restored. Your subscription status has been refreshed.');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to restore purchases';
+      Alert.alert('Restore Error', errorMessage);
+    } finally {
+      setPurchaseLoading(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      await rc.showCustomerCenter();
+      await loadProfile();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to open subscription settings';
+      Alert.alert('Manage Subscription', errorMessage);
+    }
   };
 
   const handleLogout = async () => {
@@ -54,6 +78,7 @@ export default function Profile() {
         text: 'Logout',
         style: 'destructive',
         onPress: async () => {
+          await rc.logout();
           await authApi.logout();
           router.replace('/');
         },
@@ -69,7 +94,7 @@ export default function Profile() {
     );
   }
 
-  const isPro = user?.subscription_tier === 'pro';
+  const isPro = rc.isPro || user?.subscription_tier === 'pro';
 
   return (
     <View style={styles.container}>
@@ -125,11 +150,26 @@ export default function Profile() {
                 • Offline access
               </Text>
               <View style={styles.upgradeButton}>
-                <Text style={styles.upgradeButtonText}>$4.99/month</Text>
+                <Text style={styles.upgradeButtonText}>
+                  {purchaseLoading ? 'Processing…' : '$4.99/month'}
+                </Text>
               </View>
             </LinearGradient>
           </TouchableOpacity>
         )}
+
+        <View style={styles.subscriptionActions}>
+          <TouchableOpacity
+            style={styles.subscriptionActionButton}
+            onPress={handleRestore}
+            disabled={purchaseLoading}
+          >
+            <Text style={styles.subscriptionActionText}>Restore Purchases</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.subscriptionActionButton} onPress={handleManageSubscription}>
+            <Text style={styles.subscriptionActionText}>Manage / Cancel Subscription</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>About UnMenu</Text>
@@ -281,6 +321,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#667eea',
+  },
+  subscriptionActions: {
+    gap: 10,
+    marginBottom: 16,
+  },
+  subscriptionActionButton: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    alignItems: 'center',
+  },
+  subscriptionActionText: {
+    color: '#667eea',
+    fontWeight: '600',
+    fontSize: 14,
   },
   infoCard: {
     backgroundColor: 'white',

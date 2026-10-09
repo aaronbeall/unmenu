@@ -45,6 +45,10 @@
         }
       ]
     ],
-    "scheme": "unmenu"
+    "scheme": "unmenu",
+    "extra": {
+      "revenueCatAndroidApiKey": "test_xAgeKtNVmPpHEZQEnTPSuabnBOO",
+      "revenueCatIosApiKey": "test_xAgeKtNVmPpHEZQEnTPSuabnBOO"
+    }
   }
 }

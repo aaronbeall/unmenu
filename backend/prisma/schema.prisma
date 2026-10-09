@@ -12,6 +12,9 @@ model User {
   email             String   @unique
   password_hash     String
   subscription_tier String   @default("free")
+  subscription_source String?
+  subscription_expires_at DateTime?
+  revenuecat_app_user_id String?  @unique
   scans_remaining   Int      @default(5)
   scans_reset_at    DateTime @default(now())
   created_at        DateTime @default(now())

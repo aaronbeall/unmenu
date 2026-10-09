@@ -23,6 +23,8 @@ router.get('/profile', authenticate, async (req: AuthRequest, res) => {
         id: user.id,
         email: user.email,
         subscription_tier: user.subscription_tier,
+        subscription_source: user.subscription_source,
+        subscription_expires_at: user.subscription_expires_at,
         scans_remaining: user.scans_remaining,
         scans_reset_at: user.scans_reset_at,
         created_at: user.created_at,
@@ -36,23 +38,10 @@ router.get('/profile', authenticate, async (req: AuthRequest, res) => {
 
 router.post('/upgrade', authenticate, async (req: AuthRequest, res) => {
   try {
-    const userId = req.userId!;
-
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        subscription_tier: 'pro',
-        scans_remaining: parseInt(process.env.PRO_TIER_SCANS || '35'),
-      },
-    });
-
-    res.json({
-      message: 'Upgraded to Pro successfully',
-      user: {
-        id: user.id,
-        subscription_tier: user.subscription_tier,
-        scans_remaining: user.scans_remaining,
-      },
+    res.status(410).json({
+      error: 'Direct upgrade disabled',
+      message:
+        'Use in-app purchase via RevenueCat + Google Play. Subscription state is updated via webhook events.',
     });
   } catch (error) {
     console.error('Upgrade error:', error);

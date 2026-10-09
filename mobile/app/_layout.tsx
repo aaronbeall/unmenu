@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { RevenueCatProvider } from '../lib/RevenueCatProvider';
 
 const queryClient = new QueryClient();
 
@@ -10,7 +11,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          <Stack screenOptions={{ headerShown: false }} />
+          <RevenueCatProvider>
+            <Stack screenOptions={{ headerShown: false }} />
+          </RevenueCatProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

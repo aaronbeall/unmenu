@@ -8,6 +8,7 @@ import scanRoutes from './routes/scan';
 import menuRoutes from './routes/menu';
 import userRoutes from './routes/user';
 import imagesRoutes from './routes/images';
+import billingRoutes from './routes/billing';
 import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
@@ -32,6 +33,7 @@ app.use('/api/scan', scanRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/images', imagesRoutes);
+app.use('/api/billing', billingRoutes);
 
 app.use(errorHandler);
 
